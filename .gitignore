@@ -1,0 +1,65 @@
+# ==============================================================================
+# .gitignore for the HubSpot ETL & API Project
+# ==============================================================================
+
+# --- Python ---
+# Ignore the bytecode cache directory
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+
+# Ignore virtual environment folders (common names)
+venv/
+.venv/
+env/
+.env/
+
+# Ignore distribution and packaging artifacts
+build/
+dist/
+*.egg-info/
+*.egg
+
+# --- Docker ---
+# If you use a local override file for docker-compose, it should not be committed.
+# This is useful for developer-specific settings.
+docker-compose.override.yml
+
+# --- Project-Specific ---
+# Ignore the directory where runtime logs are stored
+logs/
+
+# IMPORTANT: Ignore environment files that contain secrets and credentials.
+# Always commit an example file instead (e.g., .env.example)
+.env
+*.env.local
+
+# --- IDE & Editor Configuration ---
+# Visual Studio Code
+.vscode/
+
+# JetBrains (PyCharm, etc.)
+.idea/
+
+# Sublime Text
+*.sublime-project
+*.sublime-workspace
+
+# --- Operating System Files ---
+# macOS
+.DS_Store
+.AppleDouble
+.LSOverride
+
+# Windows
+Thumbs.db
+ehthumbs.db
+ehthumbs_vista.db
+*.stackdump
+
+# --- Testing & Coverage ---
+# Ignore pytest cache and coverage reports
+.pytest_cache/
+.coverage
+htmlcov/

@@ -1,0 +1,18 @@
+==========================================================
+Dependencies for the HubSpot ETL & API Project
+==========================================================
+--- Web Framework ---
+fastapi~=0.103.2
+pydantic~=2.4.2
+
+--- ASGI Server ---
+Using [standard] for performance extras
+uvicorn[standard]~=0.23.2
+
+--- Database Connector ---
+The binary version is recommended for ease of installation
+psycopg2-binary~=2.9.9
+
+--- HTTP Client ---
+For making requests to the HubSpot API
+requests~=2.31.0

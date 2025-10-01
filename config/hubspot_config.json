@@ -1,0 +1,21 @@
+{
+  "service_name": "hubspot_deals_etl",
+  "data_source": {
+    "name": "hubspot_deals",
+    "type": "rest_api"
+  },
+  "database": {
+    "type": "postgres"
+  },
+  "api": {
+    "hubspot_api_version": "v3",
+    "deal_endpoint": "/crm/v3/objects/deals"
+  },
+  "microservice_ports": {
+    "extraction_service": 8000,
+    "api_service": 8001
+  },
+  "documentation": {
+    "templates": ["api-integration.md", "database-schema.md"]
+  }
+}

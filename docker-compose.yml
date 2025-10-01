@@ -1,0 +1,98 @@
+# ==============================================================================
+# Docker Compose Configuration for the HubSpot ETL Application
+# Version: 3.8
+# ==============================================================================
+
+services:
+  # --- 1. PostgreSQL Database Service ---
+  database:
+    image: postgres:13-alpine
+    restart: unless-stopped
+    
+    # Environment variables to configure the PostgreSQL container.
+    # NOTE: These are hardcoded for simplicity. For production, use a .env file.
+    environment:
+      POSTGRES_USER: hubspot_deals_etl
+      POSTGRES_PASSWORD: 1
+      POSTGRES_DB: hubspot_deals_etl
+      
+    # Maps port 5433 on the host machine to port 5432 inside the container.
+    ports:
+      - "5433:5432"
+      
+    # Persists database data and runs the initialization script on first launch.
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./docker/initdb:/docker-entrypoint-initdb.d
+      
+    # Checks if the database is ready to accept connections before starting dependent services.
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U hubspot_deals_etl -d hubspot_deals_etl"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  # --- 2. Backend API Service (FastAPI) ---
+  api-service:
+    build:
+      context: .
+      dockerfile: docker/Dockerfile
+    restart: on-failure
+    
+    # Ensures this service starts only after the database is healthy.
+    depends_on:
+      database:
+        condition: service_healthy
+        
+    # Provides the database connection details to the API application.
+    environment:
+      DB_USER: hubspot_deals_etl
+      DB_PASSWORD: 1
+      DB_NAME: hubspot_deals_etl
+      DB_HOST: database # 'database' is the service name of the Postgres container
+      
+    ports:
+      - "8001:8001"
+      
+    # Mounts the current directory into the container for live code reloading.
+    volumes:
+      - .:/app
+      
+    # The command to start the FastAPI server using Uvicorn.
+    command: ["uvicorn", "main:app", "--host", "0.0.0.0", "--port", "8001", "--reload"]
+
+  # --- 3. Data Extraction Service (One-off Script) ---
+  extraction-service:
+    build:
+      context: .
+      dockerfile: docker/Dockerfile
+    # 'restart: "no"' ensures this container runs once on startup and then stops.
+    restart: "no"
+    
+    depends_on:
+      database:
+        condition: service_healthy
+        
+    # Provides all necessary credentials and configuration for the script.
+    environment:
+      # IMPORTANT: This token is hardcoded. Keep secrets out of version control in a real project.
+      HUBSPOT_ACCESS_TOKEN: "pat-na2-3cdab4ba-54f1-449b-8621-3ebad766ece9"
+      HUBSPOT_API_BASE_URL: https://api.hubapi.com
+      DB_USER: hubspot_deals_etl
+      DB_PASSWORD: 1
+      DB_NAME: hubspot_deals_etl
+      DB_HOST: database
+      PYTHONPATH: /app
+      
+    volumes:
+      - .:/app
+      - ./logs:/app/logs
+      
+    # The command to execute the Python extraction script.
+    command: ["python", "services/extraction_service.py"]
+
+# --- Named Volume Definition ---
+# Defines the named volume used by the 'database' service for persistent storage.
+volumes:
+  postgres_data:
+

@@ -1,0 +1,185 @@
+<!DOCTYPE html>
+<html lang="en" class="bg-gray-900 text-gray-200">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>HubSpot Deals Dashboard</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        /* Simple animation for new rows */
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(-10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        .new-deal-row {
+            animation: fadeIn 0.5s ease-out;
+        }
+    </style>
+</head>
+<body class="font-sans antialiased">
+    <div class="container mx-auto p-4 md:p-8">
+
+        <header class="mb-8 text-center">
+            <h1 class="text-4xl font-bold text-white tracking-tight">Deals Dashboard</h1>
+            <p class="text-gray-400 mt-2">View and add deals from the HubSpot CRM database.</p>
+        </header>
+
+        <main class="grid grid-cols-1 lg:grid-cols-3 gap-8">
+            <!-- Deals Table Section -->
+            <div class="lg:col-span-2 bg-gray-800 p-6 rounded-lg shadow-lg">
+                <h2 class="text-2xl font-semibold mb-4 text-white">All Deals</h2>
+                <div id="loading" class="text-center text-gray-400">Loading deals...</div>
+                <div class="overflow-x-auto">
+                    <table id="dealsTable" class="min-w-full divide-y divide-gray-700 hidden">
+                        <thead class="bg-gray-700">
+                            <tr>
+                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider">Deal Name</th>
+                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider">Amount</th>
+                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider">Stage</th>
+                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider">Close Date</th>
+                            </tr>
+                        </thead>
+                        <tbody id="dealsTableBody" class="bg-gray-800 divide-y divide-gray-700">
+                            <!-- JS will populate this -->
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- Add Deal Form Section -->
+            <div class="bg-gray-800 p-6 rounded-lg shadow-lg">
+                <h2 class="text-2xl font-semibold mb-4 text-white">Add a New Deal</h2>
+                <form id="addDealForm">
+                    <div class="mb-4">
+                        <label for="dealname" class="block text-sm font-medium text-gray-300">Deal Name</label>
+                        <input type="text" id="dealname" name="dealname" required class="mt-1 block w-full bg-gray-700 border-gray-600 text-white rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm p-2">
+                    </div>
+                    <div class="mb-4">
+                        <label for="amount" class="block text-sm font-medium text-gray-300">Amount ($)</label>
+                        <input type="number" id="amount" name="amount" class="mt-1 block w-full bg-gray-700 border-gray-600 text-white rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm p-2">
+                    </div>
+                    <div class="mb-4">
+                        <label for="pipeline" class="block text-sm font-medium text-gray-300">Pipeline</label>
+                        <input type="text" id="pipeline" name="pipeline" required value="default" class="mt-1 block w-full bg-gray-700 border-gray-600 text-white rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm p-2">
+                    </div>
+                    <div class="mb-4">
+                        <label for="dealstage" class="block text-sm font-medium text-gray-300">Deal Stage</label>
+                        <input type="text" id="dealstage" name="dealstage" required value="appointmentscheduled" class="mt-1 block w-full bg-gray-700 border-gray-600 text-white rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm p-2">
+                    </div>
+                    <button type="submit" id="submitButton" class="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-2 px-4 rounded-md focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 focus:ring-offset-gray-800 transition-colors duration-300">
+                        Add Deal
+                    </button>
+                    <div id="formMessage" class="mt-4 text-sm"></div>
+                </form>
+            </div>
+        </main>
+
+    </div>
+
+    <script>
+        const API_BASE_URL = 'http://localhost:8001';
+        const dealsTable = document.getElementById('dealsTable');
+        const dealsTableBody = document.getElementById('dealsTableBody');
+        const loadingDiv = document.getElementById('loading');
+        const addDealForm = document.getElementById('addDealForm');
+        const formMessage = document.getElementById('formMessage');
+        const submitButton = document.getElementById('submitButton');
+
+        // --- Helper Function to format data ---
+        const formatCurrency = (amount) => {
+            if (amount === null || isNaN(amount)) return 'N/A';
+            return new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(amount);
+        };
+        
+        const formatDate = (dateString) => {
+            if (!dateString) return 'N/A';
+            const options = { year: 'numeric', month: 'short', day: 'numeric' };
+            return new Date(dateString).toLocaleDateString(undefined, options);
+        };
+
+        // --- Fetch and Display Deals ---
+        async function fetchAndDisplayDeals() {
+            try {
+                const response = await fetch(`${API_BASE_URL}/deals`);
+                if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
+                const deals = await response.json();
+
+                dealsTableBody.innerHTML = ''; // Clear existing rows
+                deals.forEach(deal => {
+                    const row = createDealRow(deal);
+                    dealsTableBody.appendChild(row);
+                });
+
+                loadingDiv.classList.add('hidden');
+                dealsTable.classList.remove('hidden');
+            } catch (error) {
+                loadingDiv.textContent = 'Failed to load deals. Please check the API connection.';
+                console.error("Fetch error:", error);
+            }
+        }
+
+        function createDealRow(deal) {
+            const row = document.createElement('tr');
+            row.className = "hover:bg-gray-700 transition-colors duration-200";
+            row.innerHTML = `
+                <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-white">${deal.dealname}</td>
+                <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-300">${formatCurrency(deal.amount)}</td>
+                <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-300">${deal.dealstage}</td>
+                <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-300">${formatDate(deal.closedate)}</td>
+            `;
+            return row;
+        }
+
+
+        // --- Handle Form Submission ---
+        addDealForm.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            submitButton.disabled = true;
+            submitButton.textContent = 'Adding...';
+            formMessage.textContent = '';
+            formMessage.className = 'mt-4 text-sm';
+
+            const formData = new FormData(addDealForm);
+            const dealData = Object.fromEntries(formData.entries());
+            // Convert amount to a number, or null if empty
+            dealData.amount = dealData.amount ? parseFloat(dealData.amount) : null;
+
+            try {
+                const response = await fetch(`${API_BASE_URL}/deals`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(dealData),
+                });
+
+                if (!response.ok) {
+                    const errorData = await response.json();
+                    throw new Error(errorData.detail || 'Failed to create deal.');
+                }
+                
+                const newDeal = await response.json();
+
+                // Add new deal to top of table with animation
+                const newRow = createDealRow(newDeal);
+                newRow.classList.add('new-deal-row');
+                dealsTableBody.prepend(newRow);
+
+                formMessage.textContent = 'Successfully added deal!';
+                formMessage.classList.add('text-green-400');
+                addDealForm.reset();
+
+            } catch (error) {
+                formMessage.textContent = `Error: ${error.message}`;
+                formMessage.classList.add('text-red-400');
+                console.error("Submit error:", error);
+            } finally {
+                submitButton.disabled = false;
+                submitButton.textContent = 'Add Deal';
+            }
+        });
+
+
+        // --- Initial Load ---
+        document.addEventListener('DOMContentLoaded', fetchAndDisplayDeals);
+    </script>
+</body>
+</html>

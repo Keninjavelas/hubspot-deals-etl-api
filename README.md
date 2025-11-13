@@ -91,4 +91,4 @@ POST /deals Creates a new deal and stores it in the database
 
 Here’s what the dashboard looks like:
 
-![HubSpot Deals Dashboard](./Screenshot%20(101).png)
+![HubSpot Deals Dashboard](./Display.png)

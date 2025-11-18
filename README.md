@@ -80,7 +80,7 @@ POST /deals Creates a new deal and stores it in the database
 ✅ Fixes made:
 
 - Converted headings into a proper hierarchy (`##`, `###` instead of random `#`).  
-- Added fenced code blocks (` ```yaml`, ```bash`).  
+- Added fenced code blocks.  
 - Formatted lists properly with `-`.  
 - Replaced broken inline snippet with a clean example for `docker-compose.yml`.  
 - Converted API endpoints section into a clean table.  
